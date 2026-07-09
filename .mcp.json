@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "x-search-local": {
+      "command": "python3",
+      "args": [
+        "scripts/x_search_mcp.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "X_SEARCH_PLUGIN_CONFIG_FILE": "config/provider_refs.json"
+      }
+    }
+  }
+}

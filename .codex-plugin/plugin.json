@@ -1,0 +1,43 @@
+{
+  "name": "x-search",
+  "version": "1.0.0",
+  "description": "Codex plugin for searching recent public X posts through a local-only MCP server.",
+  "author": {
+    "name": "ClawRyderz",
+    "url": "https://github.com/ClawRyderz/codex-x-search-plugin"
+  },
+  "homepage": "https://github.com/ClawRyderz/codex-x-search-plugin",
+  "repository": "https://github.com/ClawRyderz/codex-x-search-plugin",
+  "license": "MIT",
+  "keywords": [
+    "x",
+    "x-search",
+    "social-research",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "X Search",
+    "shortDescription": "Search recent public X posts",
+    "longDescription": "Use a local-only MCP server to search recent public X posts with credentials resolved from 1Password references or local bootstrap paths. No raw X secrets are stored in Codex plugin files.",
+    "developerName": "ClawRyderz",
+    "category": "Research",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://developer.x.com/en/docs/x-api",
+    "privacyPolicyURL": "https://x.com/en/privacy",
+    "termsOfServiceURL": "https://x.com/en/tos",
+    "defaultPrompt": [
+      "Search X for recent posts about a topic",
+      "Find the latest discussion around a company",
+      "Pull recent posts matching a research query"
+    ],
+    "brandColor": "#111111",
+    "composerIcon": "./assets/x-icon.svg",
+    "logo": "./assets/x-icon.svg",
+    "screenshots": []
+  }
+}

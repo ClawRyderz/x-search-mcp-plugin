@@ -1,0 +1,7 @@
+{
+  "credential_sources": {
+    "bearer_token_ref_candidates": [],
+    "api_key_ref_candidates": [],
+    "api_secret_ref_candidates": []
+  }
+}
