@@ -4,10 +4,10 @@
   "description": "Search recent public X posts through a local read-only MCP server.",
   "author": {
     "name": "ClawRyderz",
-    "url": "https://github.com/ClawRyderz/x-search-mcp"
+    "url": "https://github.com/ClawRyderz/x-search-mcp-plugin"
   },
-  "homepage": "https://github.com/ClawRyderz/x-search-mcp",
-  "repository": "https://github.com/ClawRyderz/x-search-mcp",
+  "homepage": "https://github.com/ClawRyderz/x-search-mcp-plugin",
+  "repository": "https://github.com/ClawRyderz/x-search-mcp-plugin",
   "license": "MIT",
   "keywords": [
     "x",
@@ -18,7 +18,7 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "X Search MCP",
+    "displayName": "X Search MCP Plugin",
     "shortDescription": "Search recent public X posts",
     "longDescription": "Search recent public X posts through a portable local MCP server, with credentials resolved from environment variables or user-configured 1Password references.",
     "developerName": "ClawRyderz",

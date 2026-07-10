@@ -39,5 +39,5 @@ Use the X Search MCP tools first when:
 ## Installation note
 
 - The committed `.mcp.json` is a portable source-tree default for clients that load project MCP config.
-- For an isolated local install, run `python3 scripts/install.py --destination ~/.local/share/x-search-mcp`.
+- For an isolated local install, run `python3 scripts/install.py --destination ~/.local/share/x-search-mcp-plugin`.
 - Codex and Claude Code manifests are included as optional harness adapters.

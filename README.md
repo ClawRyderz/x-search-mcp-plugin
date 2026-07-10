@@ -1,4 +1,4 @@
-# X Search MCP
+# X Search MCP Plugin
 
 A portable, read-only MCP server for searching recent public posts on X.
 
@@ -35,17 +35,17 @@ The server negotiates MCP protocol versions `2024-11-05`, `2025-03-26`, and `202
 Clone the repository and create an isolated local bundle:
 
 ```bash
-git clone https://github.com/ClawRyderz/x-search-mcp.git
-cd x-search-mcp
+git clone https://github.com/ClawRyderz/x-search-mcp-plugin.git
+cd x-search-mcp-plugin
 python3 scripts/install.py \
-  --destination ~/.local/share/x-search-mcp
+  --destination ~/.local/share/x-search-mcp-plugin
 ```
 
 The installer copies the bundle, excludes repository history and caches, and renders an absolute-path `.mcp.json`. Re-run it with `--force` to replace an existing installation.
 
 ## Configure credentials
 
-No credentials or private 1Password references are included. Configure the installed copy at `~/.local/share/x-search-mcp/config/provider_refs.json`, use an external config through `X_SEARCH_CONFIG_FILE`, or provide credentials through environment variables.
+No credentials or private 1Password references are included. Configure the installed copy at `~/.local/share/x-search-mcp-plugin/config/provider_refs.json`, use an external config through `X_SEARCH_CONFIG_FILE`, or provide credentials through environment variables.
 
 ### Environment variable
 
@@ -92,15 +92,15 @@ Authenticate the 1Password CLI normally, or use `OP_SERVICE_ACCOUNT_TOKEN`. For 
 Load the native plugin for one session:
 
 ```bash
-claude --plugin-dir ~/.local/share/x-search-mcp
+claude --plugin-dir ~/.local/share/x-search-mcp-plugin
 ```
 
 This loads the bundled skill and MCP server. For a persistent user-level MCP registration without the skill:
 
 ```bash
 claude mcp add x-search --scope user \
-  -e X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp/config/provider_refs.json \
-  -- python3 $HOME/.local/share/x-search-mcp/scripts/x_search_mcp.py
+  -e X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp-plugin/config/provider_refs.json \
+  -- python3 $HOME/.local/share/x-search-mcp-plugin/scripts/x_search_mcp.py
 ```
 
 See [Claude Code's MCP documentation](https://code.claude.com/docs/en/mcp) for scopes and project `.mcp.json` approval behavior.
@@ -111,8 +111,8 @@ Register the stdio server directly:
 
 ```bash
 codex mcp add x-search \
-  --env X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp/config/provider_refs.json \
-  -- python3 $HOME/.local/share/x-search-mcp/scripts/x_search_mcp.py
+  --env X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp-plugin/config/provider_refs.json \
+  -- python3 $HOME/.local/share/x-search-mcp-plugin/scripts/x_search_mcp.py
 ```
 
 The bundle also includes `.codex-plugin/plugin.json` and the `x-search` skill for Codex marketplace packaging. See the official [Codex plugin guide](https://learn.chatgpt.com/docs/plugins).
@@ -127,10 +127,10 @@ Use the absolute-path `.mcp.json` produced by the installer, or adapt this entry
     "x-search": {
       "command": "python3",
       "args": [
-        "/ABSOLUTE/PATH/x-search-mcp/scripts/x_search_mcp.py"
+        "/ABSOLUTE/PATH/x-search-mcp-plugin/scripts/x_search_mcp.py"
       ],
       "env": {
-        "X_SEARCH_CONFIG_FILE": "/ABSOLUTE/PATH/x-search-mcp/config/provider_refs.json"
+        "X_SEARCH_CONFIG_FILE": "/ABSOLUTE/PATH/x-search-mcp-plugin/config/provider_refs.json"
       }
     }
   }

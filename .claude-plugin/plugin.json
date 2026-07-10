@@ -1,12 +1,12 @@
 {
   "name": "x-search",
   "version": "1.1.0",
-  "description": "Search recent public X posts through a local read-only MCP server.",
+  "description": "X Search MCP plugin with a local read-only server and bundled skill.",
   "author": {
     "name": "ClawRyderz"
   },
-  "homepage": "https://github.com/ClawRyderz/x-search-mcp",
-  "repository": "https://github.com/ClawRyderz/x-search-mcp",
+  "homepage": "https://github.com/ClawRyderz/x-search-mcp-plugin",
+  "repository": "https://github.com/ClawRyderz/x-search-mcp-plugin",
   "license": "MIT",
   "mcpServers": {
     "x-search-local": {
