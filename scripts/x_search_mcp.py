@@ -16,10 +16,18 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from mcp_stdio import read_message as _read_message, write_message as _write_message  # noqa: E402
 
 _SERVER_NAME = "x-search-local"
-_SERVER_VERSION = "1.0.0"
-_DEFAULT_PROTOCOL_VERSION = "2024-11-05"
+_SERVER_VERSION = "1.1.0"
+_LATEST_PROTOCOL_VERSION = "2025-06-18"
+_SUPPORTED_PROTOCOL_VERSIONS = frozenset(
+    {"2024-11-05", "2025-03-26", _LATEST_PROTOCOL_VERSION}
+)
 _RECENT_SEARCH_ENDPOINT = "https://api.x.com/2/tweets/search/recent"
 _POST_LOOKUP_ENDPOINT = "https://api.x.com/2/tweets"
 _TOKEN_ENDPOINT = "https://api.x.com/oauth2/token"
@@ -48,8 +56,11 @@ _X_URL_HOSTS = frozenset(
     }
 )
 _STATUS_PATH_PATTERN = re.compile(r"/status(?:es)?/(\d+)")
-_CONFIG_ENV_VAR = "X_SEARCH_PLUGIN_CONFIG_FILE"
-_LEGACY_CONFIG_ENV_VAR = "X_API_PLUGIN_CONFIG_FILE"
+_CONFIG_ENV_VARS = (
+    "X_SEARCH_CONFIG_FILE",
+    "X_SEARCH_PLUGIN_CONFIG_FILE",
+    "X_API_PLUGIN_CONFIG_FILE",
+)
 _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "provider_refs.json"
 _OP_AUTH_ENV_KEYS = frozenset(
     {
@@ -62,7 +73,14 @@ _OP_AUTH_ENV_KEYS = frozenset(
 _TOOL_SCHEMAS: tuple[dict[str, Any], ...] = (
     {
         "name": "x_recent_search",
+        "title": "Search recent X posts",
         "description": "Search recent public posts on X and return posts, permalinks, authors, and rate-limit metadata.",
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -102,7 +120,14 @@ _TOOL_SCHEMAS: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "x_get_post",
+        "title": "Get an X post",
         "description": "Fetch one public X post by post ID and return its text, author, permalink, and rate-limit metadata.",
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -117,7 +142,14 @@ _TOOL_SCHEMAS: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "x_get_post_by_url",
+        "title": "Get an X post by URL",
         "description": "Fetch one public X post from an x.com or twitter.com status URL.",
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -131,39 +163,6 @@ _TOOL_SCHEMAS: tuple[dict[str, Any], ...] = (
         }
     },
 )
-
-
-def _read_message() -> dict[str, Any] | None:
-    headers: dict[str, str] = {}
-    while True:
-        line = sys.stdin.buffer.readline()
-        if not line:
-            return None
-        if line in (b"\n", b"\r\n"):
-            break
-        decoded = line.decode("utf-8").strip()
-        if ":" not in decoded:
-            continue
-        key, value = decoded.split(":", 1)
-        headers[key.strip().lower()] = value.strip()
-    content_length = headers.get("content-length")
-    if content_length is None:
-        raise ValueError("Missing Content-Length header.")
-    try:
-        expected_length = int(content_length)
-    except ValueError as exc:
-        raise ValueError("Invalid Content-Length header.") from exc
-    payload = sys.stdin.buffer.read(expected_length)
-    if len(payload) != expected_length:
-        raise ValueError("Incomplete JSON-RPC payload.")
-    return json.loads(payload.decode("utf-8"))
-
-
-def _write_message(payload: dict[str, Any]) -> None:
-    encoded = json.dumps(payload, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    sys.stdout.buffer.write(f"Content-Length: {len(encoded)}\r\n\r\n".encode("ascii"))
-    sys.stdout.buffer.write(encoded)
-    sys.stdout.buffer.flush()
 
 
 def _write_result(request_id: Any, result: dict[str, Any]) -> None:
@@ -181,14 +180,14 @@ def _write_error(request_id: Any, code: int, message: str) -> None:
 
 
 def _load_config() -> dict[str, Any]:
-    config_env_value = _first_env_value(_CONFIG_ENV_VAR, _LEGACY_CONFIG_ENV_VAR)
+    config_env_value = _first_env_value(*_CONFIG_ENV_VARS)
     config_path = Path(config_env_value or str(_DEFAULT_CONFIG_PATH)).expanduser()
     if not config_path.exists():
         return {}
     with config_path.open(encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict):
-        raise ValueError("X Search plugin config must contain a JSON object.")
+        raise ValueError("X Search config must contain a JSON object.")
     return payload
 
 
@@ -357,7 +356,7 @@ def _resolve_bearer_token_candidates(config: dict[str, Any]) -> list[tuple[str, 
     if errors:
         raise ValueError(errors[-1])
     raise ValueError(
-        "No X credential source is configured. Set local ref candidates in the plugin config or supply env overrides."
+        "No X credential source is configured. Set local ref candidates in the server config or supply env overrides."
     )
 
 
@@ -389,7 +388,7 @@ def _issue_app_only_bearer_token(*, api_key: str, api_secret: str, timeout_secon
         headers={
             "Authorization": f"Basic {basic_auth}",
             "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-            "User-Agent": "codex-x-search-plugin/1.0",
+            "User-Agent": "x-search-mcp/1.1",
         },
         method="POST",
     )
@@ -478,7 +477,7 @@ def _fetch_json_once(
         request_url,
         headers={
             "Authorization": f"Bearer {bearer_token}",
-            "User-Agent": "codex-x-search-plugin/1.0",
+            "User-Agent": "x-search-mcp/1.1",
         },
         method="GET",
     )
@@ -719,13 +718,19 @@ def _handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
         raise ValueError("JSON-RPC params must be an object.")
 
     if method == "initialize":
-        protocol_version = str(params.get("protocolVersion") or _DEFAULT_PROTOCOL_VERSION)
+        requested_version = str(params.get("protocolVersion") or "")
+        protocol_version = (
+            requested_version
+            if requested_version in _SUPPORTED_PROTOCOL_VERSIONS
+            else _LATEST_PROTOCOL_VERSION
+        )
         return {
             "protocolVersion": protocol_version,
-            "capabilities": {"tools": {}},
+            "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": _SERVER_NAME, "version": _SERVER_VERSION},
+            "instructions": "Read-only access to recent public X posts. Use URL lookup for a specific post and recent search for broader discussion.",
         }
-    if method == "notifications/initialized":
+    if method in {"notifications/initialized", "notifications/cancelled"}:
         return None
     if method == "ping":
         return {}

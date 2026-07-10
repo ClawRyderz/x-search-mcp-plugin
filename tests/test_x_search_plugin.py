@@ -9,7 +9,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_SCRIPT_PATH = REPO_ROOT / "scripts" / "x_search_mcp.py"
 RENDER_MCP_PATH = REPO_ROOT / "scripts" / "render_mcp_config.py"
-INSTALL_PLUGIN_PATH = REPO_ROOT / "scripts" / "install_local_plugin.py"
+INSTALL_PATH = REPO_ROOT / "scripts" / "install.py"
 PROVIDER_REFS_PATH = REPO_ROOT / "config" / "provider_refs.json"
 
 PLUGIN_SPEC = spec_from_file_location("x_search_mcp", PLUGIN_SCRIPT_PATH)
@@ -26,9 +26,9 @@ RENDER_MODULE = module_from_spec(RENDER_SPEC)
 sys.modules[RENDER_SPEC.name] = RENDER_MODULE
 RENDER_SPEC.loader.exec_module(RENDER_MODULE)
 
-INSTALL_SPEC = spec_from_file_location("x_search_install_local_plugin", INSTALL_PLUGIN_PATH)
+INSTALL_SPEC = spec_from_file_location("x_search_install", INSTALL_PATH)
 if INSTALL_SPEC is None or INSTALL_SPEC.loader is None:
-    raise RuntimeError("Unable to load install_local_plugin.py")
+    raise RuntimeError("Unable to load install.py")
 INSTALL_MODULE = module_from_spec(INSTALL_SPEC)
 sys.modules[INSTALL_SPEC.name] = INSTALL_MODULE
 INSTALL_SPEC.loader.exec_module(INSTALL_MODULE)
@@ -66,15 +66,15 @@ def test_extract_post_id_from_x_or_twitter_urls() -> None:
 
 
 def test_render_mcp_config_writes_absolute_paths(tmp_path: Path) -> None:
-    plugin_root = tmp_path / "x-search"
-    (plugin_root / "scripts").mkdir(parents=True)
-    (plugin_root / "config").mkdir(parents=True)
+    bundle_root = tmp_path / "x-search"
+    (bundle_root / "scripts").mkdir(parents=True)
+    (bundle_root / "config").mkdir(parents=True)
     output_path = tmp_path / ".mcp.json"
 
     exit_code = RENDER_MODULE.main(
         [
-            "--plugin-root",
-            str(plugin_root),
+            "--bundle-root",
+            str(bundle_root),
             "--output",
             str(output_path),
         ]
@@ -84,18 +84,18 @@ def test_render_mcp_config_writes_absolute_paths(tmp_path: Path) -> None:
     server = payload["mcpServers"]["x-search-local"]
 
     assert exit_code == 0
-    assert server["args"] == [str(plugin_root / "scripts" / "x_search_mcp.py")]
-    assert server["env"]["X_SEARCH_PLUGIN_CONFIG_FILE"] == str(
-        plugin_root / "config" / "provider_refs.json"
+    assert server["args"] == [str(bundle_root / "scripts" / "x_search_mcp.py")]
+    assert server["env"]["X_SEARCH_CONFIG_FILE"] == str(
+        bundle_root / "config" / "provider_refs.json"
     )
 
 
-def test_install_local_plugin_copies_bundle_and_renders_absolute_mcp(tmp_path: Path) -> None:
+def test_install_copies_bundle_and_renders_absolute_mcp(tmp_path: Path) -> None:
     destination = tmp_path / "x-search-installed"
 
     exit_code = INSTALL_MODULE.main(
         [
-            "--plugin-root",
+            "--bundle-root",
             str(REPO_ROOT),
             "--destination",
             str(destination),
@@ -112,7 +112,7 @@ def test_install_local_plugin_copies_bundle_and_renders_absolute_mcp(tmp_path: P
     assert server["args"] == [str(destination / "scripts" / "x_search_mcp.py")]
 
 
-def test_install_local_plugin_replaces_symlink_destination(tmp_path: Path) -> None:
+def test_install_replaces_symlink_destination(tmp_path: Path) -> None:
     real_target = tmp_path / "real-target"
     real_target.mkdir()
     destination = tmp_path / "x-search-link"
@@ -120,7 +120,7 @@ def test_install_local_plugin_replaces_symlink_destination(tmp_path: Path) -> No
 
     exit_code = INSTALL_MODULE.main(
         [
-            "--plugin-root",
+            "--bundle-root",
             str(REPO_ROOT),
             "--destination",
             str(destination),
@@ -134,13 +134,13 @@ def test_install_local_plugin_replaces_symlink_destination(tmp_path: Path) -> No
     assert (destination / ".codex-plugin" / "plugin.json").exists()
 
 
-def test_install_local_plugin_creates_default_x_api_compat_alias(tmp_path: Path) -> None:
+def test_install_creates_default_x_api_compat_alias(tmp_path: Path) -> None:
     destination = tmp_path / "x-search"
     compat_alias = tmp_path / "x-api"
 
     exit_code = INSTALL_MODULE.main(
         [
-            "--plugin-root",
+            "--bundle-root",
             str(REPO_ROOT),
             "--destination",
             str(destination),

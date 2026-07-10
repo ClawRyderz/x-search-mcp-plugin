@@ -7,7 +7,7 @@
       ],
       "env": {
         "PYTHONUNBUFFERED": "1",
-        "X_SEARCH_PLUGIN_CONFIG_FILE": "config/provider_refs.json"
+        "X_SEARCH_CONFIG_FILE": "config/provider_refs.json"
       }
     }
   }

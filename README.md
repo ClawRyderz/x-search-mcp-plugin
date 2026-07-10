@@ -1,81 +1,59 @@
-# Codex X Search Plugin
+# X Search MCP Plugin
 
-A read-only Codex plugin for searching recent public posts on X through a local MCP server.
+A portable, read-only MCP server for searching recent public posts on X.
 
-The plugin keeps X credentials on your machine, calls the X API directly, and returns post text, authors, timestamps, metrics, permalinks, and rate-limit metadata to Codex.
+The core server is harness-neutral. It speaks standard newline-delimited stdio MCP and can run in Claude Code, Codex, or any MCP client that can launch a local command. Native Claude Code and Codex plugin manifests are included as optional adapters.
 
-## What it provides
+## Tools
 
-| Tool | Use it for |
+| Tool | Purpose |
 | --- | --- |
 | `x_recent_search` | Search recent public posts by keyword or X query syntax. |
 | `x_get_post` | Fetch one public post by numeric post ID. |
 | `x_get_post_by_url` | Fetch one public post from an `x.com` or `twitter.com` URL. |
 
-The bundled `x-search` skill tells Codex when to use each tool. A legacy `x-api` skill and launcher remain available for older tasks.
+All tools advertise read-only, non-destructive MCP annotations.
+
+## Compatibility
+
+| Harness | Integration |
+| --- | --- |
+| Any stdio MCP client | Run `scripts/x_search_mcp.py` with Python. |
+| Claude Code | Use `.claude-plugin/plugin.json`, `claude mcp add`, or the root `.mcp.json`. |
+| Codex | Use `.codex-plugin/plugin.json`, `codex mcp add`, or the root `.mcp.json`. |
+
+The server negotiates MCP protocol versions `2024-11-05`, `2025-03-26`, and `2025-06-18`. Standard JSONL framing is the default; legacy `Content-Length` framing remains supported for older clients.
 
 ## Requirements
 
-- Codex with plugin support
 - Python 3.10 or newer
 - X API credentials with access to the endpoints you want to use
 - Optional: the [1Password CLI](https://developer.1password.com/docs/cli/) for local Secret Reference resolution
 
-See the official [Codex plugin guide](https://learn.chatgpt.com/docs/plugins) and [plugin authoring guide](https://learn.chatgpt.com/docs/build-plugins) for current product and marketplace behavior.
-
 ## Install
 
-Clone the repository, then copy the plugin into a personal marketplace directory:
+Clone the repository and create an isolated local bundle:
 
 ```bash
-git clone https://github.com/ClawRyderz/codex-x-search-plugin.git
-cd codex-x-search-plugin
-python3 scripts/install_local_plugin.py \
-  --destination ~/.agents/plugins/plugins/x-search
+git clone https://github.com/ClawRyderz/x-search-mcp-plugin.git
+cd x-search-mcp-plugin
+python3 scripts/install.py \
+  --destination ~/.local/share/x-search-mcp-plugin
 ```
 
-The installer copies the bundle, renders absolute paths in the installed `.mcp.json`, and creates an `x-api` compatibility alias beside `x-search`. Re-run it with `--force` to replace an existing install.
-
-Add this entry to `~/.agents/plugins/marketplace.json`. If the file already contains other plugins, append only the `x-search` object to its existing `plugins` array.
-
-```json
-{
-  "name": "personal",
-  "interface": {
-    "displayName": "Personal"
-  },
-  "plugins": [
-    {
-      "name": "x-search",
-      "source": {
-        "source": "local",
-        "path": "./plugins/x-search"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Research"
-    }
-  ]
-}
-```
-
-Restart the ChatGPT desktop app, open **Plugins**, choose **Personal**, and install **X Search**. Start a new task after installation so the bundled skill and MCP tools are loaded.
+The installer copies the bundle, excludes repository history and caches, and renders an absolute-path `.mcp.json`. Re-run it with `--force` to replace an existing installation.
 
 ## Configure credentials
 
-No credential or private 1Password reference is included in this repository. Configure credentials only in the installed copy or its runtime environment.
+No credentials or private 1Password references are included. Configure the installed copy at `~/.local/share/x-search-mcp-plugin/config/provider_refs.json`, use an external config through `X_SEARCH_CONFIG_FILE`, or provide credentials through environment variables.
 
-### Option 1: environment variable
+### Environment variable
 
 Provide an existing bearer token through `X_SEARCH_BEARER_TOKEN`. The legacy name `X_API_BEARER_TOKEN` is also supported.
 
-Set the variable in the trusted environment that launches Codex. Avoid committing it to a shell profile, project file, or MCP manifest.
+Set it only in the trusted environment that launches your MCP client. Do not commit it to a repository or MCP manifest.
 
-### Option 2: 1Password Secret References
-
-Edit the installed file at `~/.agents/plugins/plugins/x-search/config/provider_refs.json`:
+### 1Password Secret References
 
 ```json
 {
@@ -89,7 +67,7 @@ Edit the installed file at `~/.agents/plugins/plugins/x-search/config/provider_r
 }
 ```
 
-You can instead provide an X app key and secret. The plugin exchanges the pair for an app-only bearer token:
+You can instead provide an X app key and secret. The server exchanges the pair for an app-only bearer token:
 
 ```json
 {
@@ -105,14 +83,66 @@ You can instead provide an X app key and secret. The plugin exchanges the pair f
 }
 ```
 
-Authenticate the 1Password CLI normally, or use `OP_SERVICE_ACCOUNT_TOKEN`. If you keep the service-account token in a protected local file, point to it with `OP_SERVICE_ACCOUNT_TOKEN_FILE` or `X_SEARCH_OP_SERVICE_ACCOUNT_TOKEN_FILE`.
+Authenticate the 1Password CLI normally, or use `OP_SERVICE_ACCOUNT_TOKEN`. For a protected token file, set `OP_SERVICE_ACCOUNT_TOKEN_FILE` or `X_SEARCH_OP_SERVICE_ACCOUNT_TOKEN_FILE`.
+
+## Connect a harness
+
+### Claude Code
+
+Load the native plugin for one session:
+
+```bash
+claude --plugin-dir ~/.local/share/x-search-mcp-plugin
+```
+
+This loads the bundled skill and MCP server. For a persistent user-level MCP registration without the skill:
+
+```bash
+claude mcp add x-search --scope user \
+  -e X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp-plugin/config/provider_refs.json \
+  -- python3 $HOME/.local/share/x-search-mcp-plugin/scripts/x_search_mcp.py
+```
+
+See [Claude Code's MCP documentation](https://code.claude.com/docs/en/mcp) for scopes and project `.mcp.json` approval behavior.
+
+### Codex
+
+Register the stdio server directly:
+
+```bash
+codex mcp add x-search \
+  --env X_SEARCH_CONFIG_FILE=$HOME/.local/share/x-search-mcp-plugin/config/provider_refs.json \
+  -- python3 $HOME/.local/share/x-search-mcp-plugin/scripts/x_search_mcp.py
+```
+
+The bundle also includes `.codex-plugin/plugin.json` and the `x-search` skill for Codex marketplace packaging. See the official [Codex plugin guide](https://learn.chatgpt.com/docs/plugins).
+
+### Other MCP clients
+
+Use the absolute-path `.mcp.json` produced by the installer, or adapt this entry to your client's config format:
+
+```json
+{
+  "mcpServers": {
+    "x-search": {
+      "command": "python3",
+      "args": [
+        "/ABSOLUTE/PATH/x-search-mcp-plugin/scripts/x_search_mcp.py"
+      ],
+      "env": {
+        "X_SEARCH_CONFIG_FILE": "/ABSOLUTE/PATH/x-search-mcp-plugin/config/provider_refs.json"
+      }
+    }
+  }
+}
+```
 
 ## Use
 
-Ask Codex naturally, for example:
+Ask your harness naturally, for example:
 
-- “Search X for recent posts about OpenAI Codex.”
-- “Find recent English-language posts about `from:OpenAI Codex`.”
+- “Search X for recent posts about MCP security.”
+- “Find recent English-language posts matching `from:OpenAI Codex`.”
 - “Fetch `https://x.com/openai/status/…`.”
 - “Get X post ID `1234567890`.”
 
@@ -120,30 +150,29 @@ Recent search supports `max_results`, up to five pages, `recency` or `relevancy`
 
 ## Security and privacy
 
-- The MCP server runs locally over standard input/output.
-- The plugin is read-only and does not post, like, follow, or modify X data.
-- Raw credentials are not stored in the repository, plugin manifest, or tool responses.
+- The server runs locally over standard input/output.
+- It is read-only and cannot post, like, follow, or modify X data.
+- Raw credentials are not stored in repository files or tool responses.
 - 1Password Secret References are resolved locally at runtime.
-- X requests are sent directly to `api.x.com`; X's terms and privacy policy apply.
+- X requests go directly to `api.x.com`; X's terms and privacy policy apply.
 
-Treat local config files containing private vault or item names as sensitive, even when they contain references rather than secret values.
+Treat config files containing private vault or item names as sensitive even when they contain references rather than secret values.
 
 ## Development
-
-Run the test suite from the repository root:
 
 ```bash
 python3 -m pytest tests -q
 ```
 
-Key files:
+Key paths:
 
-- `.codex-plugin/plugin.json` — plugin manifest
-- `.mcp.json` — portable source-tree MCP configuration
-- `config/provider_refs.json` — empty, safe-to-publish credential-source template
-- `scripts/x_search_mcp.py` — local MCP server
-- `scripts/install_local_plugin.py` — local installer and MCP config renderer
-- `skills/x-search/SKILL.md` — Codex routing guidance
+- `scripts/x_search_mcp.py` — harness-neutral MCP server
+- `scripts/mcp_stdio.py` — standard JSONL stdio transport with legacy compatibility
+- `.mcp.json` — portable source-tree MCP config
+- `.claude-plugin/plugin.json` — Claude Code adapter
+- `.codex-plugin/plugin.json` — Codex adapter
+- `skills/x-search/SKILL.md` — cross-compatible agent skill
+- `scripts/install.py` — generic local installer
 
 ## License
 

@@ -1,13 +1,13 @@
 {
   "name": "x-search",
-  "version": "1.0.0",
-  "description": "Codex plugin for searching recent public X posts through a local-only MCP server.",
+  "version": "1.1.0",
+  "description": "Search recent public X posts through a local read-only MCP server.",
   "author": {
     "name": "ClawRyderz",
-    "url": "https://github.com/ClawRyderz/codex-x-search-plugin"
+    "url": "https://github.com/ClawRyderz/x-search-mcp-plugin"
   },
-  "homepage": "https://github.com/ClawRyderz/codex-x-search-plugin",
-  "repository": "https://github.com/ClawRyderz/codex-x-search-plugin",
+  "homepage": "https://github.com/ClawRyderz/x-search-mcp-plugin",
+  "repository": "https://github.com/ClawRyderz/x-search-mcp-plugin",
   "license": "MIT",
   "keywords": [
     "x",
@@ -18,9 +18,9 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "X Search",
+    "displayName": "X Search MCP Plugin",
     "shortDescription": "Search recent public X posts",
-    "longDescription": "Use a local-only MCP server to search recent public X posts with credentials resolved from 1Password references or local bootstrap paths. No raw X secrets are stored in Codex plugin files.",
+    "longDescription": "Search recent public X posts through a portable local MCP server, with credentials resolved from environment variables or user-configured 1Password references.",
     "developerName": "ClawRyderz",
     "category": "Research",
     "capabilities": [

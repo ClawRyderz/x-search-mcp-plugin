@@ -1,0 +1,22 @@
+{
+  "name": "x-search",
+  "version": "1.1.0",
+  "description": "X Search MCP plugin with a local read-only server and bundled skill.",
+  "author": {
+    "name": "ClawRyderz"
+  },
+  "homepage": "https://github.com/ClawRyderz/x-search-mcp-plugin",
+  "repository": "https://github.com/ClawRyderz/x-search-mcp-plugin",
+  "license": "MIT",
+  "mcpServers": {
+    "x-search-local": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/x_search_mcp.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

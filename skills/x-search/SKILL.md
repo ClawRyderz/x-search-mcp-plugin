@@ -1,21 +1,21 @@
 ---
 name: x-search
-description: Search recent public X posts through the local X Search MCP server. Use when the user wants live recent discussion, topical research, or the latest public posts from X.
+description: Search recent public X posts through the local X Search MCP server. Use for live public discussion, topical research, or a specific X post URL.
 ---
 
 # X Search
 
 ## Overview
 
-This plugin exposes local-only X tools for Codex.
+This bundle exposes local-only X tools through MCP.
 
 - It is read-only.
 - It resolves credentials through environment variables or user-configured 1Password references.
-- It never stores raw X secrets in plugin files, Codex config, or chat.
+- It never stores raw X secrets in repository files, harness config, or chat.
 
 ## When to use it
 
-Use the X Search plugin first when:
+Use the X Search MCP tools first when:
 
 - recent public discussion on X about a topic
 - live social chatter around a company, event, or person
@@ -33,11 +33,11 @@ Use the X Search plugin first when:
 ## Secret posture
 
 - Do not paste raw X bearer tokens, consumer keys, consumer secrets, or 1Password service-account tokens into chat.
-- If auth fails, check the local environment variables or update the installed plugin's `config/provider_refs.json`.
-- Prefer rotating or updating refs locally rather than passing secrets through Codex.
+- If auth fails, check the local environment variables or update the installed bundle's `config/provider_refs.json`.
+- Prefer rotating or updating refs locally rather than passing secrets through the harness.
 
-## Install note
+## Installation note
 
-- The committed `.mcp.json` is a portable source-tree default.
-- For normal local use, run `python3 scripts/install_local_plugin.py --destination ~/plugins/x-search`.
-- The installer copies the plugin into `~/plugins/x-search` and rewrites `.mcp.json` there with absolute local paths for Codex.
+- The committed `.mcp.json` is a portable source-tree default for clients that load project MCP config.
+- For an isolated local install, run `python3 scripts/install.py --destination ~/.local/share/x-search-mcp-plugin`.
+- Codex and Claude Code manifests are included as optional harness adapters.
