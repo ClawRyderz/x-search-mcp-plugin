@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from importlib.util import module_from_spec, spec_from_file_location
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -45,6 +46,7 @@ def test_committed_provider_config_contains_no_private_references() -> None:
         "api_key_ref_candidates": [],
         "api_secret_ref_candidates": [],
     }
+    assert payload["bearer_token_file"] == "~/.config/x-search-mcp/bearer-token"
 
 
 def test_normalize_x_status_url_adds_scheme_when_missing() -> None:
@@ -153,6 +155,73 @@ def test_install_creates_default_x_api_compat_alias(tmp_path: Path) -> None:
     assert (compat_alias / "scripts" / "x_api_mcp.py").exists()
 
 
+def test_install_creates_split_doctor_bundle_and_accepts_private_configs(tmp_path: Path) -> None:
+    destination = tmp_path / "x-search"
+    runtime_config = tmp_path / "runtime.json"
+    doctor_config = tmp_path / "doctor.json"
+    runtime_payload = {"bearer_token_file": "~/.private/x-token"}
+    doctor_payload = {
+        "credential_sources": {
+            "bearer_token_ref_candidates": ["op://Private Vault/X API/Bearer Token"]
+        },
+        "bearer_token_file": "~/.private/x-token",
+    }
+    runtime_config.write_text(json.dumps(runtime_payload), encoding="utf-8")
+    doctor_config.write_text(json.dumps(doctor_payload), encoding="utf-8")
+
+    exit_code = INSTALL_MODULE.main(
+        [
+            "--bundle-root",
+            str(REPO_ROOT),
+            "--destination",
+            str(destination),
+            "--runtime-config",
+            str(runtime_config),
+            "--doctor-config",
+            str(doctor_config),
+        ]
+    )
+
+    doctor = tmp_path / "x-search-doctor"
+    assert exit_code == 0
+    assert json.loads(
+        (destination / "config" / "provider_refs.json").read_text(encoding="utf-8")
+    ) == runtime_payload
+    assert json.loads(
+        (doctor / "config" / "provider_refs.json").read_text(encoding="utf-8")
+    ) == doctor_payload
+    doctor_mcp = json.loads((doctor / ".mcp.json").read_text(encoding="utf-8"))
+    assert doctor_mcp["mcpServers"]["x-search-doctor-local"]["env"][
+        "X_SEARCH_PLUGIN_MODE"
+    ] == "doctor"
+    assert (destination / ".claude-plugin" / "plugin.json").exists()
+    assert (doctor / ".claude-plugin" / "plugin.json").exists()
+    assert not (destination / "skills" / "x-search-doctor").exists()
+    assert not (doctor / "skills" / "x-search").exists()
+
+
+def test_render_mcp_config_supports_doctor_mode(tmp_path: Path) -> None:
+    bundle_root = tmp_path / "doctor"
+    output_path = tmp_path / "doctor.mcp.json"
+
+    exit_code = RENDER_MODULE.main(
+        [
+            "--bundle-root",
+            str(bundle_root),
+            "--output",
+            str(output_path),
+            "--mode",
+            "doctor",
+        ]
+    )
+
+    server = json.loads(output_path.read_text(encoding="utf-8"))["mcpServers"][
+        "x-search-doctor-local"
+    ]
+    assert exit_code == 0
+    assert server["env"]["X_SEARCH_PLUGIN_MODE"] == "doctor"
+
+
 def test_resolve_bearer_token_candidates_keeps_oauth_and_bearer_fallback() -> None:
     original_first_env_value = PLUGIN_MODULE._first_env_value
     original_resolve_candidate_refs = PLUGIN_MODULE._resolve_candidate_refs
@@ -242,3 +311,79 @@ def test_fetch_json_retries_with_next_credential_source_after_401() -> None:
     assert calls == ["bad-token", "good-token"]
     assert payload == {"data": [{"id": "1"}]}
     assert headers == {"x-rate-limit-remaining": "42"}
+
+
+def test_admin_candidates_do_not_let_runtime_file_deduplicate_admin_ref(tmp_path: Path) -> None:
+    token_path = tmp_path / "bearer-token"
+    token_path.write_text("same-token\n", encoding="utf-8")
+    original_resolve_refs = PLUGIN_MODULE._resolve_candidate_refs
+    original_read_secret = PLUGIN_MODULE._read_first_resolved_secret
+    try:
+        PLUGIN_MODULE._resolve_candidate_refs = lambda *args, **kwargs: (
+            ["op://Private Vault/X API/Bearer Token"]
+            if kwargs.get("config_key") == "bearer_token_ref_candidates"
+            else []
+        )
+        PLUGIN_MODULE._read_first_resolved_secret = lambda *args, **kwargs: "same-token"
+        candidates = PLUGIN_MODULE._resolve_admin_bearer_token_candidates(
+            {"bearer_token_file": str(token_path)}
+        )
+    finally:
+        PLUGIN_MODULE._resolve_candidate_refs = original_resolve_refs
+        PLUGIN_MODULE._read_first_resolved_secret = original_read_secret
+
+    assert candidates == [("ref:bearer-token", "same-token")]
+
+
+def test_runtime_candidates_use_only_direct_or_cached_bearer(tmp_path: Path) -> None:
+    token_path = tmp_path / "bearer-token"
+    token_path.write_text("cached-token\n", encoding="utf-8")
+
+    candidates = PLUGIN_MODULE._resolve_runtime_bearer_token_candidates(
+        {"bearer_token_file": str(token_path)}
+    )
+
+    assert candidates == [("file:bearer-token", "cached-token")]
+
+
+def test_runtime_env_token_survives_missing_optional_cache_file(tmp_path: Path) -> None:
+    original_env = os.environ.copy()
+    try:
+        os.environ["X_SEARCH_BEARER_TOKEN"] = "environment-token"
+        candidates = PLUGIN_MODULE._resolve_runtime_bearer_token_candidates(
+            {"bearer_token_file": str(tmp_path / "missing-token")}
+        )
+    finally:
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    assert candidates == [("env:bearer", "environment-token")]
+
+
+def test_write_secret_to_file_uses_private_permissions(tmp_path: Path) -> None:
+    token_path = tmp_path / "nested" / "bearer-token"
+
+    PLUGIN_MODULE._write_secret_to_file(
+        str(token_path), label="bearer_token_file", secret_value="fresh-token"
+    )
+
+    assert token_path.read_text(encoding="utf-8") == "fresh-token\n"
+    assert token_path.stat().st_mode & 0o777 == 0o600
+
+
+def test_doctor_mode_exposes_only_doctor_tools() -> None:
+    original_env = os.environ.copy()
+    try:
+        os.environ["X_SEARCH_PLUGIN_MODE"] = "doctor"
+        response = PLUGIN_MODULE._handle_request(
+            {"method": "tools/list", "params": {}}
+        )
+    finally:
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    assert response is not None
+    assert [tool["name"] for tool in response["tools"]] == [
+        "x_auth_doctor",
+        "x_refresh_runtime_token",
+    ]

@@ -12,7 +12,12 @@ The core server is harness-neutral. It speaks standard newline-delimited stdio M
 | `x_get_post` | Fetch one public post by numeric post ID. |
 | `x_get_post_by_url` | Fetch one public post from an `x.com` or `twitter.com` URL. |
 
-All tools advertise read-only, non-destructive MCP annotations.
+The optional doctor mode adds `x_auth_doctor` for redacted diagnostics and
+`x_refresh_runtime_token` for refreshing the local bearer-token cache. Normal
+search sessions do not receive those admin tools.
+
+The three runtime tools advertise read-only, non-destructive MCP annotations.
+The doctor refresh tool is explicitly marked as a local write operation.
 
 ## Compatibility
 
@@ -43,9 +48,24 @@ python3 scripts/install.py \
 
 The installer copies the bundle, excludes repository history and caches, and renders an absolute-path `.mcp.json`. Re-run it with `--force` to replace an existing installation.
 
+When the destination is named `x-search`, the installer also creates sibling
+`x-search-doctor` and legacy `x-api` entries. For another layout, pass
+`--doctor-destination`, `--compat-alias-destination`, or disable either one.
+
 ## Configure credentials
 
 No credentials or private 1Password references are included. Configure the installed copy at `~/.local/share/x-search-mcp-plugin/config/provider_refs.json`, use an external config through `X_SEARCH_CONFIG_FILE`, or provide credentials through environment variables.
+
+Private config files can also be supplied without modifying the checkout:
+
+```bash
+python3 scripts/install.py \
+  --destination ~/plugins/x-search \
+  --runtime-config ~/.config/x-search-mcp/runtime.json \
+  --doctor-config ~/.config/x-search-mcp/doctor.json
+```
+
+The public templates intentionally contain no vault or item names.
 
 ### Environment variable
 
@@ -158,6 +178,12 @@ Recent search supports `max_results`, up to five pages, `recency` or `relevancy`
 
 Treat config files containing private vault or item names as sensitive even when they contain references rather than secret values.
 
+For the recommended split install, keep the runtime config limited to its local
+bearer-token file and put 1Password refs or OAuth client credentials in the
+doctor config. This preserves an approval-free read path while keeping repair
+capabilities isolated. Single-bundle MCP clients retain the existing environment
+and user-configured Secret Reference fallbacks for compatibility.
+
 ## Development
 
 ```bash
@@ -167,6 +193,7 @@ python3 -m pytest tests -q
 Key paths:
 
 - `scripts/x_search_mcp.py` — harness-neutral MCP server
+- `scripts/x_search_doctor.py` — redacted command-line auth diagnostics
 - `scripts/mcp_stdio.py` — standard JSONL stdio transport with legacy compatibility
 - `.mcp.json` — portable source-tree MCP config
 - `.claude-plugin/plugin.json` — Claude Code adapter

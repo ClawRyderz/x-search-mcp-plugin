@@ -1,7 +1,7 @@
 {
   "name": "x-search",
-  "version": "1.1.0",
-  "description": "Search recent public X posts through a local read-only MCP server.",
+  "version": "1.4.1",
+  "description": "Search recent public X posts through a local MCP server with a separate auth doctor.",
   "author": {
     "name": "ClawRyderz",
     "url": "https://github.com/ClawRyderz/x-search-mcp-plugin"

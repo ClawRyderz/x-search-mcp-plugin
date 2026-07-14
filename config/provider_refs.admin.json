@@ -1,0 +1,10 @@
+{
+  "credential_sources": {
+    "vault_candidates": [],
+    "bearer_token_ref_candidates": [],
+    "api_key_ref_candidates": [],
+    "api_secret_ref_candidates": []
+  },
+  "bearer_token_file": "~/.config/x-search-mcp/bearer-token",
+  "op_service_account_token_file": "~/.config/x-search-mcp/op-service-account-token"
+}
