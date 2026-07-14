@@ -1,6 +1,6 @@
 {
   "name": "x-search",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Search recent public X posts through a local MCP server with a separate auth doctor.",
   "author": {
     "name": "ClawRyderz",

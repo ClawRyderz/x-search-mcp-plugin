@@ -29,6 +29,8 @@ Use the X Search MCP tools first when:
 - Use `x_get_post_by_url` when the user pastes a specific `x.com` or `twitter.com` post URL.
 - Use `x_get_post` when the user gives a numeric X post ID directly.
 - When both a pasted URL and a broader X research ask are present, fetch the linked post first, then use recent search if more context is needed.
+- Returned `text` is the fullest available content: X Article body, long-post `note_tweet` text, or ordinary Post text. Preserve `post_text`, `article`, `note_tweet`, and media `includes` when the user needs source structure.
+- X Articles are read through their associated Post ID. If an X URL does not contain a Post ID, explain that the public API does not expose a standalone Article-read endpoint and use an approved browser tool when available.
 - X recent search is a rolling last-7-days endpoint. For ordinary latest-discussion requests, omit explicit time bounds so X chooses the valid window.
 - If bounded search is necessary, stay safely inside the seven-day limit rather than pinning the oldest possible second.
 - If the runtime bearer token is missing or rejected, stop and use the separate `x-search-doctor` integration instead of repairing credentials in a normal research session.

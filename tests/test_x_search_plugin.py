@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from urllib.parse import parse_qs, urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +66,61 @@ def test_extract_post_id_from_x_or_twitter_urls() -> None:
         PLUGIN_MODULE._extract_post_id_from_url("https://twitter.com/openai/status/9876543210")
         == "9876543210"
     )
+
+
+def test_lookup_requests_article_long_post_and_media_fields() -> None:
+    request_url = PLUGIN_MODULE._build_lookup_url(post_id="1234567890")
+    query = parse_qs(urlparse(request_url).query)
+
+    tweet_fields = set(query["tweet.fields"][0].split(","))
+    expansions = set(query["expansions"][0].split(","))
+    media_fields = set(query["media.fields"][0].split(","))
+    assert {"article", "note_tweet", "attachments", "text"} <= tweet_fields
+    assert {"article.cover_media", "article.media_entities"} <= expansions
+    assert {"alt_text", "url", "preview_image_url", "variants"} <= media_fields
+
+
+def test_normalize_post_prefers_article_body_and_preserves_post_text() -> None:
+    post = PLUGIN_MODULE._normalize_post(
+        {
+            "id": "123",
+            "text": "Article preview",
+            "author_id": "42",
+            "article": {
+                "title": "Full Article",
+                "content_state": {
+                    "blocks": [
+                        {"text": "First paragraph."},
+                        {"text": "Second paragraph."},
+                    ]
+                },
+            },
+        },
+        {"42": {"username": "writer", "name": "Writer"}},
+    )
+
+    assert post is not None
+    assert post["content_kind"] == "article"
+    assert post["text"] == "First paragraph.\n\nSecond paragraph."
+    assert post["post_text"] == "Article preview"
+    assert post["article"]["title"] == "Full Article"
+    assert post["permalink"] == "https://x.com/writer/status/123"
+
+
+def test_normalize_post_prefers_note_tweet_for_long_posts() -> None:
+    post = PLUGIN_MODULE._normalize_post(
+        {
+            "id": "456",
+            "text": "Truncated preview",
+            "note_tweet": {"text": "Complete long-form post."},
+        },
+        {},
+    )
+
+    assert post is not None
+    assert post["content_kind"] == "long_post"
+    assert post["text"] == "Complete long-form post."
+    assert post["post_text"] == "Truncated preview"
 
 
 def test_render_mcp_config_writes_absolute_paths(tmp_path: Path) -> None:

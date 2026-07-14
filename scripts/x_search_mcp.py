@@ -24,7 +24,7 @@ from mcp_stdio import read_message as _read_message, write_message as _write_mes
 
 _RUNTIME_SERVER_NAME = "x-search-local"
 _DOCTOR_SERVER_NAME = "x-search-doctor-local"
-_SERVER_VERSION = "1.4.1"
+_SERVER_VERSION = "1.5.0"
 _LATEST_PROTOCOL_VERSION = "2025-06-18"
 _SUPPORTED_PROTOCOL_VERSIONS = frozenset(
     {"2024-11-05", "2025-03-26", _LATEST_PROTOCOL_VERSION}
@@ -32,21 +32,44 @@ _SUPPORTED_PROTOCOL_VERSIONS = frozenset(
 _RECENT_SEARCH_ENDPOINT = "https://api.x.com/2/tweets/search/recent"
 _POST_LOOKUP_ENDPOINT = "https://api.x.com/2/tweets"
 _TOKEN_ENDPOINT = "https://api.x.com/oauth2/token"
-_DEFAULT_TWEET_FIELDS = ("created_at", "public_metrics", "author_id", "lang")
-_DEFAULT_USER_FIELDS = ("username", "name", "verified", "public_metrics")
-_DEFAULT_EXPANSIONS = ("author_id",)
-_LOOKUP_TWEET_FIELDS = (
+_DEFAULT_TWEET_FIELDS = (
+    "article",
+    "attachments",
     "author_id",
     "conversation_id",
     "created_at",
+    "display_text_range",
     "entities",
     "lang",
+    "note_tweet",
     "possibly_sensitive",
     "public_metrics",
     "referenced_tweets",
-    "source",
     "text",
 )
+_DEFAULT_USER_FIELDS = ("username", "name", "verified", "public_metrics")
+_DEFAULT_EXPANSIONS = (
+    "article.cover_media",
+    "article.media_entities",
+    "attachments.media_keys",
+    "author_id",
+    "referenced_tweets.id",
+    "referenced_tweets.id.attachments.media_keys",
+    "referenced_tweets.id.author_id",
+)
+_DEFAULT_MEDIA_FIELDS = (
+    "alt_text",
+    "duration_ms",
+    "height",
+    "media_key",
+    "preview_image_url",
+    "public_metrics",
+    "type",
+    "url",
+    "variants",
+    "width",
+)
+_LOOKUP_TWEET_FIELDS = (*_DEFAULT_TWEET_FIELDS, "source")
 _X_URL_HOSTS = frozenset(
     {
         "x.com",
@@ -903,7 +926,7 @@ def _issue_app_only_bearer_token(*, api_key: str, api_secret: str, timeout_secon
         headers={
             "Authorization": f"Basic {basic_auth}",
             "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-            "User-Agent": "x-search-mcp-plugin/1.4.1",
+            "User-Agent": "x-search-mcp-plugin/1.5.0",
         },
         method="POST",
     )
@@ -944,6 +967,7 @@ def _build_search_url(arguments: dict[str, Any], *, next_token: str | None = Non
         "expansions": ",".join(_DEFAULT_EXPANSIONS),
         "tweet.fields": ",".join(_DEFAULT_TWEET_FIELDS),
         "user.fields": ",".join(_DEFAULT_USER_FIELDS),
+        "media.fields": ",".join(_DEFAULT_MEDIA_FIELDS),
     }
     for field_name in ("start_time", "end_time"):
         value = arguments.get(field_name)
@@ -966,6 +990,7 @@ def _build_lookup_url(*, post_id: str) -> str:
         "expansions": ",".join(_DEFAULT_EXPANSIONS),
         "tweet.fields": ",".join(_LOOKUP_TWEET_FIELDS),
         "user.fields": ",".join(_DEFAULT_USER_FIELDS),
+        "media.fields": ",".join(_DEFAULT_MEDIA_FIELDS),
     }
     return f"{_POST_LOOKUP_ENDPOINT}?{urlencode(params)}"
 
@@ -992,7 +1017,7 @@ def _fetch_json_once(
         request_url,
         headers={
             "Authorization": f"Bearer {bearer_token}",
-            "User-Agent": "x-search-mcp-plugin/1.4.1",
+            "User-Agent": "x-search-mcp-plugin/1.5.0",
         },
         method="GET",
     )
@@ -1086,10 +1111,38 @@ def _build_users_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return users_by_id
 
 
+def _extract_article_text(article: dict[str, Any]) -> str:
+    for field_name in ("text", "plain_text", "body"):
+        value = article.get(field_name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    content_state = article.get("content_state")
+    if not isinstance(content_state, dict):
+        return ""
+    blocks = content_state.get("blocks")
+    if not isinstance(blocks, list):
+        return ""
+    block_text = [
+        str(block.get("text", "")).strip()
+        for block in blocks
+        if isinstance(block, dict) and str(block.get("text", "")).strip()
+    ]
+    return "\n\n".join(block_text)
+
+
 def _normalize_post(raw_post: dict[str, Any], users_by_id: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
     post_id = str(raw_post.get("id", "")).strip()
-    text = str(raw_post.get("text", "")).strip()
-    if not post_id or not text:
+    post_text = str(raw_post.get("text", "")).strip()
+    article = raw_post.get("article")
+    if not isinstance(article, dict):
+        article = {}
+    note_tweet = raw_post.get("note_tweet")
+    if not isinstance(note_tweet, dict):
+        note_tweet = {}
+    article_text = _extract_article_text(article)
+    note_text = str(note_tweet.get("text", "")).strip()
+    full_text = article_text or note_text or post_text
+    if not post_id or not full_text:
         return None
     author_id = str(raw_post.get("author_id", "")).strip()
     author_payload = users_by_id.get(author_id, {})
@@ -1097,9 +1150,16 @@ def _normalize_post(raw_post: dict[str, Any], users_by_id: dict[str, dict[str, A
     permalink = None
     if isinstance(username, str) and username.strip():
         permalink = f"https://x.com/{username.strip()}/status/{post_id}"
+    content_kind = "article" if article else "long_post" if note_tweet else "post"
     return {
         "post_id": post_id,
-        "text": text,
+        "text": full_text,
+        "post_text": post_text,
+        "content_kind": content_kind,
+        "article": article or None,
+        "note_tweet": note_tweet or None,
+        "attachments": raw_post.get("attachments", {}),
+        "display_text_range": raw_post.get("display_text_range"),
         "created_at": raw_post.get("created_at"),
         "conversation_id": raw_post.get("conversation_id"),
         "lang": raw_post.get("lang"),
@@ -1161,6 +1221,7 @@ def _search_recent_posts(arguments: dict[str, Any]) -> dict[str, Any]:
                 "reset_unix_seconds": _coerce_int(headers.get("x-rate-limit-reset")),
             },
             "posts": page_posts,
+            "includes": payload.get("includes", {}),
         }
         pages.append(page)
         aggregated_posts.extend(page_posts)
@@ -1228,6 +1289,7 @@ def _get_post(arguments: dict[str, Any]) -> dict[str, Any]:
             "reset_unix_seconds": _coerce_int(headers.get("x-rate-limit-reset")),
         },
         "post": normalized_post,
+        "includes": payload.get("includes", {}),
     }
 
 

@@ -1,6 +1,6 @@
 {
   "name": "x-search",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "X Search MCP plugin with a local read-only server and bundled skill.",
   "author": {
     "name": "ClawRyderz"

@@ -12,6 +12,11 @@ The core server is harness-neutral. It speaks standard newline-delimited stdio M
 | `x_get_post` | Fetch one public post by numeric post ID. |
 | `x_get_post_by_url` | Fetch one public post from an `x.com` or `twitter.com` URL. |
 
+Search and lookup request the `article` and `note_tweet` fields plus article,
+attachment, quoted-post, and media expansions. The normalized `text` value is
+the fullest content X returns, while `post_text` and the raw structured objects
+remain available for provenance.
+
 The optional doctor mode adds `x_auth_doctor` for redacted diagnostics and
 `x_refresh_runtime_token` for refreshing the local bearer-token cache. Normal
 search sessions do not receive those admin tools.
