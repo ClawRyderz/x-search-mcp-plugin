@@ -1,6 +1,6 @@
 ---
 name: x-search
-description: Search recent public X posts through the local X Search MCP server. Use for live public discussion, topical research, or a specific X post URL.
+description: Fetch public X posts by URL or numeric ID, or search recent X discussion. Use for x.com/twitter.com status links, post IDs, and X research requests.
 ---
 
 # X Search
