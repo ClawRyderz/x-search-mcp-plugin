@@ -1,6 +1,6 @@
 ---
 name: x-search
-description: Fetch public X posts by URL or numeric ID, or search recent X discussion. Use for x.com/twitter.com status links, post IDs, and X research requests.
+description: Fetch public X posts by URL or numeric ID, or run raw recent X searches. Use for x.com/twitter.com status links, post IDs, exact quotes, authors, timestamps, metrics, or checking claims against real posts. For a synthesized summary of what people are saying, prefer a research-agent skill when one is installed.
 ---
 
 # X Search
@@ -15,13 +15,15 @@ This bundle exposes local-only X tools through MCP.
 
 ## When to use it
 
-Use the X Search MCP tools first when:
+Use the X Search MCP tools when the answer must come from the posts themselves:
 
-- recent public discussion on X about a topic
-- live social chatter around a company, event, or person
-- a bounded recent-search query with timestamps, rate-limit context, and permalinks
-- the user says "search X", "search on X", or asks for "the latest on X"
-- the user pastes an `x.com` or `twitter.com` status URL
+- the user pastes an `x.com` or `twitter.com` status URL, or gives a post ID
+- exact wording, authors, timestamps, permalinks, or engagement metrics
+- a bounded recent-search query (last 7 days) whose raw results matter
+- verifying another model's or agent's claims about X against real posts
+- a quick lookup needed in seconds
+
+For open-ended research ("what are people saying about…", sentiment, who is discussing a topic), a research-agent skill that reads and summarizes many posts is usually the better first step when one is installed; use these tools to check what it cites.
 
 ## Tool routing
 

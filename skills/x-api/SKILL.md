@@ -1,6 +1,6 @@
 ---
 name: x-api
-description: Search recent public X posts through the local X API MCP server. Use when the user wants live recent discussion, topical research, or the latest public posts from X.
+description: Legacy alias of x-search. Fetch exact public X posts and raw recent-search results through the local X API MCP server. Use for a specific post URL or ID, exact quotes, authors, timestamps, or checking claims against real posts.
 ---
 
 # X API
