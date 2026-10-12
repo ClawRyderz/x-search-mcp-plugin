@@ -1389,7 +1389,8 @@ def _handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": _resolve_server_name(), "version": _SERVER_VERSION},
             "instructions": (
-                "Read-only X research tools are available in runtime mode. "
+                "Read-only X research tools are available in runtime mode: exact posts, threads and raw recent-search results "
+                "with permalinks. For a synthesized summary of a discussion, prefer a research-agent skill when one is installed. "
                 "Authentication diagnosis and local token refresh are available in doctor mode."
             ),
         }
