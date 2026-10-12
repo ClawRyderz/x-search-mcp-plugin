@@ -1,6 +1,6 @@
 ---
 name: x-search
-description: Fetch exact public X posts and raw recent-search results through the local X Search MCP server. Use for a specific X post URL or ID, exact quotes, threads, who posted what and when, metrics, or checking claims against real posts. For a synthesized summary of what people are saying, prefer a research-agent skill when one is installed.
+description: Fetch public X posts by URL or numeric ID, or run raw recent X searches. Use for x.com/twitter.com status links, post IDs, exact quotes, authors, timestamps, metrics, or checking claims against real posts. For a synthesized summary of what people are saying, prefer a research-agent skill when one is installed.
 ---
 
 # X Search
