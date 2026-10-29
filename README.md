@@ -78,6 +78,10 @@ Provide an existing bearer token through `X_SEARCH_BEARER_TOKEN`. The legacy nam
 
 Set it only in the trusted environment that launches your MCP client. Do not commit it to a repository or MCP manifest.
 
+### Behind a proxy that adds the credential
+
+Some sandboxes keep the token outside the machine and have their egress proxy add the `Authorization` header for `api.x.com`. There, set `X_SEARCH_BEARER_TOKEN` to any placeholder such as `proxy-injected`; the proxy replaces it with the real token, so no secret is on the machine.
+
 ### 1Password Secret References
 
 ```json
@@ -173,6 +177,17 @@ Ask your harness naturally, for example:
 
 Recent search supports `max_results`, up to five pages, `recency` or `relevancy` sorting, and optional ISO-8601 `start_time` and `end_time` bounds. Availability and query limits depend on your X API access.
 
+### Command line
+
+Without an MCP client, `scripts/x_search_cli.py` runs the same read-only lookups and prints JSON:
+
+```bash
+python3 scripts/x_search_cli.py post https://x.com/someone/status/1234567890
+python3 scripts/x_search_cli.py search "from:someone mcp" --max-results 10
+```
+
+It uses the same credential sources as the server.
+
 ## Security and privacy
 
 - The server runs locally over standard input/output.
@@ -198,6 +213,7 @@ python3 -m pytest tests -q
 Key paths:
 
 - `scripts/x_search_mcp.py` — harness-neutral MCP server
+- `scripts/x_search_cli.py` — command-line post lookup and recent search
 - `scripts/x_search_doctor.py` — redacted command-line auth diagnostics
 - `scripts/mcp_stdio.py` — standard JSONL stdio transport with legacy compatibility
 - `.mcp.json` — portable source-tree MCP config
