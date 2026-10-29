@@ -37,6 +37,18 @@ For open-ended research ("what are people saying about…", sentiment, who is di
 - If bounded search is necessary, stay safely inside the seven-day limit rather than pinning the oldest possible second.
 - If the runtime bearer token is missing or rejected, stop and use the separate `x-search-doctor` integration instead of repairing credentials in a normal research session.
 
+## Without the MCP tools
+
+When the X Search MCP tools aren't loaded but the bundle is installed (for example in a cloud shell), run the same lookups from the command line. Each prints JSON with the same fields as the tools:
+
+```bash
+python3 <bundle>/scripts/x_search_cli.py post https://x.com/someone/status/1234567890
+python3 <bundle>/scripts/x_search_cli.py post 1234567890
+python3 <bundle>/scripts/x_search_cli.py search "from:someone mcp" --max-results 10
+```
+
+An installer may put a wrapper on `PATH` named `x-search` that takes the same arguments. Exit 1 with `HTTP 401` or `403` means the credential is missing or rejected: say so and stop rather than trying another route.
+
 ## Secret posture
 
 - Do not paste raw X bearer tokens, consumer keys, consumer secrets, or 1Password service-account tokens into chat.
